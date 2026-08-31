@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # GitHub Actions の更新（SHAピン留めを自動更新）
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+  # Go モジュールの更新
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps"

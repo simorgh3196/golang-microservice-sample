@@ -1,0 +1,38 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck       # エラー戻り値の無視を検知
+    - gosimple       # コードの簡略化提案
+    - govet          # Go公式の静的解析（シャドーイングやフォーマット文字列ミス）
+    - ineffassign    # 未使用の変数代入を検知
+    - staticcheck    # 高度なバグ・パフォーマンス検知（公式推奨）
+    - unused         # 未使用の定数・変数・関数・型を検知
+    - gosec          # セキュリティ脆弱性の静的スキャン（SQLインジェクション、ハードコード鍵等）
+    - revive         # 高速・拡張可能なgolint代替（命名規則や制御構文チェック）
+    - goimports      # import文の自動整理・フォーマット
+    - misspell       # 英語スペルミスの検知
+    - prealloc       # スライス事前割り当て（メモリ最適化）の提案
+    - unconvert      # 不要な型変換の検知
+
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment # 厳格すぎる構造体パディング最適化は初期開発ではオフ
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-components
+          disabled: true
+    gosec:
+      excludes:
+        - G104 # errrcheckと重複するため除外
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
