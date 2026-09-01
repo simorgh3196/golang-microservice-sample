@@ -1,0 +1,22 @@
+{
+    "[proto]": {
+        "editor.defaultFormatter": "DrBlury.protobuf-vsc"
+    },
+    "[protobuf]": {
+        "editor.defaultFormatter": "DrBlury.protobuf-vsc"
+    },
+    // Formatting
+    "protobuf.formatOnSave": true,
+    "protobuf.formatter.alignFields": true,
+    // Import search paths
+    "protobuf.includes": [
+        "${workspaceFolder}/proto"
+    ],
+    // Linting (Buf) on save
+    "protobuf.externalLinter.enabled": true,
+    "protobuf.externalLinter.linter": "buf",
+    "protobuf.externalLinter.runOnSave": true,
+    // IntelliSense/hover polish
+    "protobuf.completion.autoImport": true,
+    "protobuf.hover.showDocumentation": true,
+}

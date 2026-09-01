@@ -27,7 +27,7 @@ jobs:
           args: --timeout=5m
 
   buf:
-    name: Lint Protobuf (Buf)
+    name: Lint & Verify Protobuf (Buf)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,10 +40,13 @@ jobs:
 
       - name: Buf Lint & Format Check
         run: |
-          if [ -f "proto/buf.yaml" ]; then
-            buf lint proto
-            buf format proto --diff --exit-code
-          fi
+          buf lint
+          buf format --diff --exit-code
+      
+      - name: Verify Code Generation
+        run: |
+          buf generate
+          git diff --exit-code || (echo "❌ Protobuf code generation is out of date. Run 'buf generate' and commit the changes." && exit 1)
 
   test:
     name: Unit Tests & Race Detector
