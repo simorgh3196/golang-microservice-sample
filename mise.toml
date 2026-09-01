@@ -1,2 +1,5 @@
 [tools]
-go = "1.27.0"
+go = "latest"
+buf = "latest"
+golangci-lint = "latest"
+sqlc = "latest"
