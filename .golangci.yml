@@ -30,8 +30,6 @@ linters:
       rules:
         - name: exported
           disabled: false
-        - name: package-components
-          disabled: true
     gosec:
       excludes:
         - G104 # errrcheckと重複するため除外
