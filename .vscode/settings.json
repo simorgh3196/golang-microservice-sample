@@ -19,4 +19,12 @@
     // IntelliSense/hover polish
     "protobuf.completion.autoImport": true,
     "protobuf.hover.showDocumentation": true,
+    "go.lintTool": "golangci-lint",
+    "go.lintOnSave": "package",
+    "go.lintFlags": [
+        "--fast"
+    ],
+    "terminal.integrated.env.linux": {
+        "PATH": "${userHome}/.local/share/mise/shims:${env:PATH}"
+    }
 }
