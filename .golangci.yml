@@ -35,6 +35,5 @@ linters:
         - G104 # errrcheckと重複するため除外
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
