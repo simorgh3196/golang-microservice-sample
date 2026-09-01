@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package agentforge.auth.v1;
+
+option go_package = "github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1;authv1";
+
+// 認証・IAM サービス
+service AuthService {
+  // API Key の検証 & テナント情報取得
+  rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
+
+  // テナント情報の取得
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+}
+
+// API Key 検証リクエスト
+message ValidateApiKeyRequest {
+  string api_key = 1;
+}
+
+// API Key 検証レスポンス
+message ValidateApiKeyResponse {
+  bool is_valid = 1;
+  string tenant_id = 2; // UUIDv7
+  string key_id = 3;
+  string role = 4; // admin / member / read_only
+}
+
+// テナント情報取得リクエスト
+message GetTenantRequest {
+  string tenant_id = 1; // UUIDv7
+}
+
+// テナント情報取得レスポンス
+message GetTenantResponse {
+  string tenant_id = 1; // UUIDv7
+  string name = 2;
+  string plan = 3; // enterprise / pro
+}
