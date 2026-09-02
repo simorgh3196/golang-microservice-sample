@@ -11,14 +11,17 @@ import (
 
 var _ authv1connect.AuthServiceHandler = (*AuthHandler)(nil)
 
+// AuthHandler は認証及びテナント管理を行う Connect-RpPC ハンドラーです
 type AuthHandler struct {
 	authv1connect.UnimplementedAuthServiceHandler
 }
 
+// NewAuthHandler は AuthHandler の新しいインスタンスを生成します
 func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{}
 }
 
+// ValidateApiKey はAPIキーを検証し、有効であればテナント情報と権限ロールを返します
 func (h *AuthHandler) ValidateApiKey(
 	ctx context.Context,
 	req *connect.Request[authv1.ValidateApiKeyRequest],
@@ -44,6 +47,7 @@ func (h *AuthHandler) ValidateApiKey(
 	return res, nil
 }
 
+// GetTenant はテナントIDを指定してテナント詳細情報を取得します
 func (h *AuthHandler) GetTenant(
 	ctx context.Context,
 	req *connect.Request[authv1.GetTenantRequest],
