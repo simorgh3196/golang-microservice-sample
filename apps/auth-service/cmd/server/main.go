@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/handler"
+	"github.com/simorgh3196/golang-microservice-sample/pkg/connectutil"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1/authv1connect"
 )
 
@@ -21,7 +23,13 @@ func main() {
 
 	// ルーティングの登録
 	mux := http.NewServeMux()
-	path, h := authv1connect.NewAuthServiceHandler(authHandler)
+	path, h := authv1connect.NewAuthServiceHandler(
+		authHandler,
+		connect.WithInterceptors(
+			connectutil.NewRecoveryInterceptor(logger),
+			connectutil.NewLoggingInterceptor(logger),
+		),
+	)
 	mux.Handle(path, h)
 
 	// ヘルスチェック用のエンドポイント
