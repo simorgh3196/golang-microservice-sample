@@ -64,5 +64,5 @@ jobs:
       - name: Run Tests
         run: |
           if [ -f "go.work" ] || [ -f "go.mod" ]; then
-            go test -v -race ./pkg/...
+            go test -v -race ./apps/auth-service/... ./pkg/...
           fi
