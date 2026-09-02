@@ -24,7 +24,9 @@
     "go.lintFlags": [
         "--fast"
     ],
-    "terminal.integrated.env.linux": {
-        "PATH": "${userHome}/.local/share/mise/shims:${env:PATH}"
+    "go.alternateTools": {
+        "go": "${env:HOME}/.local/share/mise/shims/go",
+        "golangci-lint": "${env:HOME}/.local/share/mise/shims/golangci-lint",
+        "gopls": "${env:HOME}/.local/share/mise/shims/gopls"
     }
 }
