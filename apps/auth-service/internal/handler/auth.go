@@ -2,23 +2,39 @@ package handler
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/db"
 	authv1 "github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1/authv1connect"
 )
 
 var _ authv1connect.AuthServiceHandler = (*AuthHandler)(nil)
 
+// Store はハンドラが必要とする DB 操作を定義したインターフェースです
+type Store interface {
+	GetApiKeyByHash(ctx context.Context, keyHash string) (db.ApiKey, error)
+	GetTenantByID(ctx context.Context, tenantID uuid.UUID) (db.Tenant, error)
+}
+
 // AuthHandler は認証及びテナント管理を行う Connect-RpPC ハンドラーです
 type AuthHandler struct {
 	authv1connect.UnimplementedAuthServiceHandler
+	store Store
 }
 
 // NewAuthHandler は AuthHandler の新しいインスタンスを生成します
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(store Store) *AuthHandler {
+	return &AuthHandler{
+		store: store,
+	}
 }
 
 // ValidateApiKey はAPIキーを検証し、有効であればテナント情報と権限ロールを返します
@@ -31,17 +47,28 @@ func (h *AuthHandler) ValidateApiKey(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("api_key is required"))
 	}
 
-	if apiKey != "test-agentforge-key-123" {
-		return connect.NewResponse(&authv1.ValidateApiKeyResponse{
-			IsValid: false,
-		}), nil
+	hash := sha256.Sum256([]byte(apiKey))
+	keyHash := hex.EncodeToString(hash[:])
+
+	key, err := h.store.GetApiKeyByHash(ctx, keyHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// キーが存在しない、または無効化されている場合は 401 エラーを返します
+			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid api key"))
+		}
+
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to validate api key"))
+	}
+
+	// 有効期限のチェック(設定されている場合)
+	if key.ExpiresAt.Valid && time.Now().After(key.ExpiresAt.Time) {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("api key has expired"))
 	}
 
 	res := connect.NewResponse(&authv1.ValidateApiKeyResponse{
-		IsValid:  true,
-		TenantId: "018f2b34-8c7a-7b3f-8000-000000000001",
-		KeyId:    "key_test_01",
-		Role:     "admin",
+		TenantId: key.TenantID.String(),
+		KeyId:    key.ID,
+		Role:     key.Role,
 	})
 
 	return res, nil
@@ -57,14 +84,25 @@ func (h *AuthHandler) GetTenant(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("tenant_id is required"))
 	}
 
-	if tenantID != "018f2b34-8c7a-7b3f-8000-000000000001" {
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("tenant not found"))
+	// 文字列を uuid.UUID に変換
+	tenantUUID, err := uuid.Parse(tenantID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid tenant_id format"))
+	}
+
+	// DBからテナントを取得
+	tenant, err := h.store.GetTenantByID(ctx, tenantUUID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("failed to get tenant"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, errors.New(("failed to get tenant")))
 	}
 
 	res := connect.NewResponse(&authv1.GetTenantResponse{
 		TenantId: tenantID,
-		Name:     "Acme Enterprise Corp",
-		Plan:     "enterprise",
+		Name:     tenant.Name,
+		Plan:     tenant.Plan,
 	})
 	return res, nil
 }

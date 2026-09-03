@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// NewJSONCodec はゼロ値（falseや空文字）も省略せずに出力する JSON コーデックを生成します。
 func NewJSONCodec() connect.Codec {
 	return &protoJSONCodec{
 		name: "json",

@@ -69,10 +69,9 @@ func (x *ValidateApiKeyRequest) GetApiKey() string {
 // API Key 検証レスポンス
 type ValidateApiKeyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsValid       bool                   `protobuf:"varint,1,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"` // UUIDv7
-	KeyId         string                 `protobuf:"bytes,3,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
-	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"` // admin / member / read_only
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"` // UUIDv7
+	KeyId         string                 `protobuf:"bytes,2,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"` // admin / member / read_only
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -105,13 +104,6 @@ func (x *ValidateApiKeyResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ValidateApiKeyResponse.ProtoReflect.Descriptor instead.
 func (*ValidateApiKeyResponse) Descriptor() ([]byte, []int) {
 	return file_agentforge_auth_v1_auth_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *ValidateApiKeyResponse) GetIsValid() bool {
-	if x != nil {
-		return x.IsValid
-	}
-	return false
 }
 
 func (x *ValidateApiKeyResponse) GetTenantId() string {
@@ -247,12 +239,11 @@ const file_agentforge_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x1dagentforge/auth/v1/auth.proto\x12\x12agentforge.auth.v1\"0\n" +
 	"\x15ValidateApiKeyRequest\x12\x17\n" +
-	"\aapi_key\x18\x01 \x01(\tR\x06apiKey\"{\n" +
-	"\x16ValidateApiKeyResponse\x12\x19\n" +
-	"\bis_valid\x18\x01 \x01(\bR\aisValid\x12\x1b\n" +
-	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x15\n" +
-	"\x06key_id\x18\x03 \x01(\tR\x05keyId\x12\x12\n" +
-	"\x04role\x18\x04 \x01(\tR\x04role\"/\n" +
+	"\aapi_key\x18\x01 \x01(\tR\x06apiKey\"`\n" +
+	"\x16ValidateApiKeyResponse\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x15\n" +
+	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\"/\n" +
 	"\x10GetTenantRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"X\n" +
 	"\x11GetTenantResponse\x12\x1b\n" +

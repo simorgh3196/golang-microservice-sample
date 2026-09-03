@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/db"
 	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/handler"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/connectutil"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1/authv1connect"
@@ -19,12 +22,39 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	authHandler := handler.NewAuthHandler()
+	// グレースフルシャットダウン (SIGINT / SIGTERM を待機)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// DB 接続プールの初期化
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		logger.Error("DATABASE_URL environment variable is required")
+		os.Exit(1)
+	}
+
+	pool, err := pgxpool.New(ctx, dbURL)
+	if err != nil {
+		logger.Error("Failed to create DB pool", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	// 起動時に DB への疎通確認
+	if err := pool.Ping(ctx); err != nil {
+		logger.Error("Failed to ping DB", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	logger.Info("Connected to database successfully")
+
+	store := db.New(pool)
+	authHandler := handler.NewAuthHandler(store)
 
 	// ルーティングの登録
 	mux := http.NewServeMux()
 	path, h := authv1connect.NewAuthServiceHandler(
 		authHandler,
+		connect.WithCodec(connectutil.NewJSONCodec()),
 		connect.WithInterceptors(
 			connectutil.NewRecoveryInterceptor(logger),
 			connectutil.NewLoggingInterceptor(logger),
@@ -54,10 +84,6 @@ func main() {
 		Protocols:         protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	// グレースフルシャットダウン (SIGINT / SIGTERM を待機)
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		logger.Info("Starting AuthService", slog.String("addr", addr))

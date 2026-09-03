@@ -22,6 +22,11 @@ linters:
     - unconvert      # 不要な型変換の検知
     - paralleltest   # t.Parallel() が書かれていないテストを検知してエラーにする
 
+  exclusions:
+    rules:
+      - path: (.+)_test\.go
+        text: "G101:" # テストコードでのダミーキー・ダミートークンの誤検知を除外
+
   settings:
     govet:
       enable-all: true
