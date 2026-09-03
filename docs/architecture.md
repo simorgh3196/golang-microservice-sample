@@ -55,7 +55,7 @@ flowchart TB
     end
 
     subgraph InternalServices ["Internal Microservices (Connect-RPC / HTTP/2)"]
-        AuthSvc["Auth & IAM Service\n(JWT / API Key / RBAC / 鍵管理)"]
+        AuthSvc["Auth & IAM Service\n(内部JWT発行・JWKS公開 / API Key / RBAC / クォータ)"]
         AgentSvc["Agent Runtime Service\n(エージェント思考ループ / セッション / Singleflight)"]
         KnowledgeSvc["Context & Knowledge Service\n(階層型コンテキスト合成 / RAG / pgvector / Skills / RLS)"]
         NotifySvc["Notification & Webhook Service\n(タスク完了通知 / HMAC署名 / DLQ)"]
@@ -63,19 +63,22 @@ flowchart TB
 
     subgraph DataLayer ["Data & Storage Layer"]
         AuthDB[(PostgreSQL\nAuth DB - 物理分離)]
-        KnowledgeDB[(PostgreSQL RLS + pgvector / Turso\nナレッジ・Skills・コンテキスト DB)]
-        SessionDB[(PostgreSQL RLS / TiDB\n会話履歴・メッセージ DB)]
+        KnowledgeDB[(PostgreSQL RLS + pgvector\nナレッジ・Skills・コンテキスト DB)]
+        SessionDB[(PostgreSQL RLS\n会話履歴・メッセージ・Outbox DB)]
         EventBus[(NATS / Redis Streams\n非同期イベントバス)]
     end
 
     subgraph ObservabilityStack ["監視 & 計測 (SREプラクティス)"]
-        OTelCollector["OTel Collector"]
+        OTelCollector["OTel Collector\n(Agent / DaemonSet)"]
+        Exporters["Exporters\n(node / cAdvisor / kube-state / postgres / redis / blackbox)"]
         Jaeger["Jaeger (Tracing)"]
-        Prometheus["Prometheus (Metrics)"]
-        Grafana["Grafana (Dashboard)"]
+        Prometheus["Prometheus (Metrics: RED + USE)"]
+        Loki["Loki (Logs)"]
+        Alertmanager["Alertmanager\n(ルーティング / 抑制 / Runbook)"]
+        Grafana["Grafana\n(Dashboard / trace⇄log 相関)"]
     end
 
-    Frontend -->|"HTTPS / GraphQL (HttpOnly Cookie)"| BFF
+    Frontend -->|"HTTPS / SSE & GraphQL (HttpOnly Cookie)"| BFF
     AIAgent -->|"MCP Protocol / SSE"| MCPServer
     ExternalCI -->|"HTTPS / REST (API Key)"| PublicGateway
 
@@ -83,7 +86,7 @@ flowchart TB
     PublicGateway -->|"レートリミット & API Keyキャッシュ"| RedisCache
     MCPServer --> PublicGateway
 
-    BFF -->|"Connect-RPC (短命JWT / メタデータ伝播)"| AuthSvc
+    BFF -->|"Connect-RPC (短命JWTの発行要求 / セッション検証)"| AuthSvc
     BFF -->|"Connect-RPC (短命JWT / メタデータ伝播)"| AgentSvc
     BFF -->|"Connect-RPC (短命JWT / メタデータ伝播)"| KnowledgeSvc
     PublicGateway -->|"Connect-RPC (スコープ検証済みコンテキスト)"| AgentSvc
@@ -102,7 +105,12 @@ flowchart TB
     PublicGateway -.->|"Trace & Metrics"| OTelCollector
     OTelCollector --> Jaeger
     OTelCollector --> Prometheus
+    OTelCollector --> Loki
+    Exporters --> Prometheus
+    Prometheus --> Alertmanager
     Prometheus --> Grafana
+    Loki --> Grafana
+    Jaeger --> Grafana
 ```
 
 ---
@@ -119,11 +127,11 @@ flowchart TB
 
     subgraph K8sCluster ["Kubernetes Cluster (k3d / EKS / GKE)"]
         subgraph IngressRouting ["Ingress ルーティング"]
-            IngressRule["K8s Ingress\n(/graphql ➔ BFF)\n(/api/* ➔ Public Gateway)\n(/mcp/* ➔ MCP Server)"]
+            IngressRule["K8s Ingress\n(/chat, /graphql ➔ BFF)\n(/v1/* ➔ Public Gateway)\n(/mcp/* ➔ MCP Server)"]
         end
 
         subgraph GatewayPods ["Gateway Pods (水平スケール HPA)"]
-            Pod_BFF["Pod: bff-graphql (複数台)"]
+            Pod_BFF["Pod: bff-gateway (複数台)"]
             Pod_Pub["Pod: public-api (複数台)"]
             Pod_MCP["Pod: agentforge-mcp (複数台)"]
         end
@@ -135,7 +143,7 @@ flowchart TB
         subgraph MicroservicePods ["Backend Microservice Pods (水平スケール HPA)"]
             Pod_Auth["Pod: auth-service (複数台)"]
             Pod_Agent["Pod: agent-service (複数台)"]
-            Pod_Knowledge["Pod: knowledge-service (複数台)"]
+            Pod_Knowledge["Pod: context-service (複数台)"]
             Pod_Notify["Pod: notification-service (複数台)"]
         end
 
@@ -147,8 +155,7 @@ flowchart TB
     end
 
     subgraph Databases ["データベース層"]
-        DB_Postgres[("PostgreSQL\n(Auth / Knowledge pgvector / Session RLS)")]
-        DB_Cloud[("Cloud DB (Turso / TiDB Serverless)\n【マルチテナント・DR検証】")]
+        DB_Postgres[("PostgreSQL\n(Auth / Context pgvector / Session RLS)\n※ サービスごとに論理DBを分離")]
     end
 
     InternetUser --> ExtLB
@@ -167,7 +174,6 @@ flowchart TB
     Pod_Knowledge --> Pod_PgBouncer
     Pod_Auth --> Pod_PgBouncer
     Pod_PgBouncer --> DB_Postgres
-    Pod_Knowledge -.-> DB_Cloud
 
     Pod_Agent -.-> Pod_NATS
     Pod_NATS -.-> Pod_Notify
@@ -187,16 +193,27 @@ flowchart TB
 | **機密ナレッジ漏洩 (Cross-Tenant)** | クエリのWHERE句忘れによる他テナントの機密RAGデータ漏洩 | **PostgreSQL RLS (Row Level Security)** でDB層から完全遮断<br>Go型システムによる `TenantContext` 必須化 |
 | **情報漏洩・監査不足** | ログへのプロンプト内個人情報(PII)/API Key出力 | **ログサニタイズ・マスキング**（zap/slogフィルター）<br>**改ざん不可な構造化監査ログ** の記録 |
 | **API乱用・DDoS** | 外部連携APIへの大量リクエストによるリソース枯渇 | **Redis Token Bucket レートリミッター**<br>**Webhook HMAC署名検証** |
+| **デプロイ起因の断** | Rolling Update 中の 502、SIGTERM による進行中ストリームの切断 | **Readiness / Startup Probe**<br>**preStop + Graceful Shutdown の連動** |
+| **リソース枯渇・検知遅れ** | ディスク満杯で DB が書けない、メモリリークで OOMKilled、内部は健全なのに外から繋がらない | **USE メトリクス + `predict_linear` 予測アラート**<br>**外形監視（blackbox_exporter）**<br>**Alertmanager の抑制で根本原因 1 通に集約** |
+
+上記の防御パターンはすべて、ロードマップの **💥 障害シミュレーション** で「防御なしの状態で事故を再現 → 防御を入れて再発しないことを確認 → ポストモーテムを書く」という順序で体得する。インシデント種別と Step の対応表は [docs/roadmap.md](roadmap.md#インシデント種別と再現する-step-の対応表) を参照。
 
 ---
 
 ## 🔄 ゼロダウンタイム運用 & マルチクラウドDR
 
 ### 1. 🔄 Expand / Contract パターン（無停止マイグレーション）
+
 - **スキーマ安全移行**: プロンプトテンプレートやSkillsテーブルの構造変更時も、旧バージョンと新バージョンを並行運用してダウンタイムゼロで移行。
 - **Kubernetes Rolling Update & Graceful Shutdown**:
   - `PreStop Hook` と Goの `SIGTERM` ハンドラにより、実行中エージェントセッションの完了を待ってからPodを安全停止。
 
-### 2. 🌐 【Advanced】マルチクラウド & ディザスタリカバリ (DR)
-- **クラウド中立設計**: **Kubernetes + Connect-RPC + Terraform** で構築し、AWS障害時でもGCPへ切り替え可能なポータビリティを確保。
-- **分散DB活用**: TiDB Serverless / Turso 等によるマルチクラウド横断データ同期の検証。
+### 2. 🌐 マルチクラウド & ディザスタリカバリ (DR)
+
+- **クラウド中立設計**: **Kubernetes + Connect-RPC** で構築し、特定クラウドの独自サービスに依存しないポータビリティを確保する。
+- **本リポジトリのスコープ外**: Terraform によるクラウドプロビジョニングと、TiDB / Turso 等の分散DBによるDR検証は、学習の深さを優先して対象外とした（[ADR-0002](adr/0002-scope-out-turso-tidb-terraform.md)）。ロードマップ完走後にクラウドへ展開する段階で、新しい ADR として再検討する。
+
+### 3. 🔐 認証トークンの発行者と検証者の分離
+
+- **署名鍵は auth-service だけが持つ**: BFF や Public Gateway は内部JWTの発行を auth-service に要求し、自らは署名しない。鍵がゲートウェイ層に漏れると、ゲートウェイの侵害が全サービスの侵害に直結するため。
+- **検証は公開鍵のみで行う**: auth-service が JWKS（`kid` 付き公開鍵）を配布し、各マイクロサービスは公開鍵検証だけでステートレスに認証する。鍵のローテーションは `kid` の切り替えで無停止に行う。

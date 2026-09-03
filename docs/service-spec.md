@@ -9,6 +9,7 @@
 **AgentForge Enterprise** は、企業内で複数の自律型AIエージェント（リサーチャー、コーダー、カスタマーサポート、データアナリスト等）を編成し、安全なマルチテナント環境下でナレッジ（RAG/Skills）やツール（MCP）を共有・実行・統制するための**エンタープライズAIエージェント・オーケストレーションプラットフォーム**です。
 
 ### 👥 主要ターゲット & ユースケース
+
 - **エンタープライズ企業**: 部署・プロジェクト単位で機密情報を厳格に分離しつつ、AIエージェントを活用したい企業。
 - **権限・コンプライアンス管理**: 「経理エージェントには給与データへのアクセスを許可するが、開発エージェントにはアクセスさせない」等の厳格なRBAC。
 - **個人 & プロジェクトのカスタマイズ**: 個人専用の `AGENTS.md` やプロジェクト固有のコンテキストルール、カスタムMCPツールの連携。
@@ -109,14 +110,16 @@ erDiagram
 ## ⚙️ 主要な機能要件
 
 ### 1. 組織・権限 & IAM (Auth & IAM)
+
 - **マルチテナント階層**: 企業（Tenant） ➔ 部署（Workspace） ➔ プロジェクト（Project） ➔ セッション（Session）。
 - **粒度の細かいロール認可 (RBAC/ReBAC)**:
   - `Admin`: 企業全体のLLMモデル利用制限、全社コンテキスト、監査ログ閲覧。
   - `Project Manager`: プロジェクト固有のコンテキストルールや連携MCPサーバーの設定。
   - `Member`: 許可されたエージェントとの対話・実行。
-- **外部連携用 API Key**: CI/CDや外部SaaSからエージェントを直接キックするための認証キー（`ag_live_...`）。
+- **外部連携用 API Key**: CI/CDや外部SaaSからエージェントを直接キックするための認証キー（`agf_live_...`）。
 
 ### 2. 🧠 階層型コンテキスト統合エンジン (Hierarchical Context Engine)
+
 - **動的コンテキスト合成**:
   1. **企業レベル (Org Directive)**: 全社セキュリティ規約、禁止語句、コンプライアンス方針。
   2. **プロジェクトレベル (Project Context)**: リポジトリ規約、アーキテクチャ設計書、コーディングルール。
@@ -126,6 +129,7 @@ erDiagram
   - 企業ポリシー ➔ プロジェクト規約 ➔ 個人指示 の順で優先度を調停し、トークン長上限（Context Window）に収まるよう自動要約・圧縮。
 
 ### 3. ナレッジ・Skills & MCPサンドボックス (Knowledge, Skills & Tools)
+
 - **ベクトル検索 (RAG)**:
   - PostgreSQL RLS + `pgvector` により、他テナントの情報を物理遮断したセキュアなナレッジ検索。
 - **Skill パッケージ配信**:
@@ -133,17 +137,19 @@ erDiagram
 - **MCP (Model Context Protocol) ツール実行**:
   - エージェントに許可された外部ツール（GitHub, Jira, DBクエリ, Slack等）を安全なサンドボックス経由で実行。
 - **リアルタイム・ストリーミング**:
-  - エージェントの思考過程、ツール実行結果、生成トークンを **Server-Sent Events (SSE) / GraphQL Subscription** でリアルタイム配信。
+  - エージェントの思考過程、ツール実行結果、生成トークンを **Server-Sent Events (SSE)** でリアルタイム配信（GraphQL Subscription は不採用。[tech-selection §10](tech-selection.md#10-リアルタイム思考ストリーミング-bff--フロント) 参照）。
 
 ### 4. 📢 Webhook 通知 & イベント連携 (Event & Notification)
+
 - **イベント自動配信**:
   - エージェントの「タスク完了（`agent.task_completed`）」「人間の確認待ち（`agent.approval_required`）」「エラー発生（`agent.failed`）」を外部URLへHMAC-SHA256署名付きで即座にWebhook配信。
 - **リトライ・DLQ制御**:
   - 外部サーバー不通時の Exponential Backoff + Jitter リトライ、連続失敗時の Dead Letter Queue (DLQ) 隔離。
 
 ### 5. 🌐 外部連携 API (OpenAI 互換 & Management REST API)
+
 - **OpenAI 互換エンドポイント (`POST /v1/chat/completions`)**:
-  - 外部ツール（Cursor, Cline, LangChain, Python/TypeScript `openai` SDK）から `base_url="http://localhost:8080/v1"` と `api_key="af_live_..."` を指定するだけで即座に対話・実行可能。
+  - 外部ツール（Cursor, Cline, LangChain, Python/TypeScript `openai` SDK）から `base_url="http://localhost:8080/v1"` と `api_key="agf_live_..."` を指定するだけで即座に対話・実行可能。
   - **自動インジェクション**: リクエストを受け取ると、API Keyからテナントを特定し、PostgreSQL RLSによる社内ナレッジ（RAG）や企業ポリシー（禁止事項）を裏側で自動的にプロンプト合成。
   - **SSE ストリーミング完全対応**: `stream: true` 時に OpenAI 互換の `data: {"choices": [{"delta": {"content": "..."}}]}` 形式で逐次配信。
   - **モデル一覧 (`GET /v1/models`)**: テナントで利用可能なエージェントプリセット（`agentforge-react`, `agentforge-researcher` 等）を返却。
