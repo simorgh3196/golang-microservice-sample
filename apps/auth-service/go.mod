@@ -1,6 +1,6 @@
 module github.com/simorgh3196/golang-microservice-sample/apps/auth-service
 
-go 1.27.0
+go 1.26
 
 require (
 	connectrpc.com/connect v1.20.0

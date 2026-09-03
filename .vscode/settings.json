@@ -1,4 +1,31 @@
 {
+    "[go]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.insertSpaces": false,
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "[go.mod]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.insertSpaces": false,
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "[go.work]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.insertSpaces": false,
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
     "[proto]": {
         "editor.defaultFormatter": "DrBlury.protobuf-vsc"
     },
@@ -25,8 +52,10 @@
         "--fast"
     ],
     "go.alternateTools": {
+        "dlv": "${env:HOME}/.local/share/mise/shims/dlv",
         "go": "${env:HOME}/.local/share/mise/shims/go",
         "golangci-lint": "${env:HOME}/.local/share/mise/shims/golangci-lint",
-        "gopls": "${env:HOME}/.local/share/mise/shims/gopls"
+        "gopls": "${env:HOME}/.local/share/mise/shims/gopls",
+        "impl": "${env:HOME}/.local/share/mise/shims/impl"
     }
 }

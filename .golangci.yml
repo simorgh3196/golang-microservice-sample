@@ -33,7 +33,7 @@ linters:
           disabled: false
     gosec:
       excludes:
-        - G104 # errrcheckと重複するため除外
+        - G104 # errcheckと重複するため除外
 
 issues:
   max-issues-per-linter: 0
