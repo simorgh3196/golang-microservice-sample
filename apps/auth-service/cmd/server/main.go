@@ -11,20 +11,38 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/db"
 	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/handler"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/connectutil"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1/authv1connect"
+	"github.com/simorgh3196/golang-microservice-sample/pkg/logging"
+	"github.com/simorgh3196/golang-microservice-sample/pkg/telemetry"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	baseHandler := slog.NewJSONHandler(os.Stdout, nil)
+	logger := slog.New(logging.NewTraceHandler(baseHandler))
 
 	// グレースフルシャットダウン (SIGINT / SIGTERM を待機)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// OpenTelemetry TracerProvicer の初期化
+	shutdownTracer, err := telemetry.InitTracerProvider(ctx, "auth-service", "1.0.0")
+	if err != nil {
+		logger.Error("Failed to initialize telemetry", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracer(shutdownCtx); err != nil {
+			logger.Error("Failed to shutdown tracer provider", slog.String("error", err.Error()))
+		}
+	}()
 
 	// DB 接続プールの初期化
 	dbURL := os.Getenv("DATABASE_URL")
@@ -50,12 +68,20 @@ func main() {
 	store := db.New(pool)
 	authHandler := handler.NewAuthHandler(store)
 
+	// Connect-RPC 用の OpenTelemetry インターセプターを生成
+	otelInterceptor, err := otelconnect.NewInterceptor()
+	if err != nil {
+		logger.Error("Failed to create otelconnect interceptor", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
 	// ルーティングの登録
 	mux := http.NewServeMux()
 	path, h := authv1connect.NewAuthServiceHandler(
 		authHandler,
 		connect.WithCodec(connectutil.NewJSONCodec()),
 		connect.WithInterceptors(
+			otelInterceptor,
 			connectutil.NewRecoveryInterceptor(logger),
 			connectutil.NewLoggingInterceptor(logger),
 		),
