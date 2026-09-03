@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"time"
 
 	"connectrpc.com/connect"
@@ -14,6 +15,7 @@ import (
 	"github.com/simorgh3196/golang-microservice-sample/apps/auth-service/internal/db"
 	authv1 "github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1"
 	"github.com/simorgh3196/golang-microservice-sample/pkg/gen/agentforge/auth/v1/authv1connect"
+	"github.com/simorgh3196/golang-microservice-sample/pkg/logging"
 )
 
 var _ authv1connect.AuthServiceHandler = (*AuthHandler)(nil)
@@ -53,6 +55,10 @@ func (h *AuthHandler) ValidateApiKey(
 	key, err := h.store.GetApiKeyByHash(ctx, keyHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			slog.WarnContext(ctx, "api key validation failed: key not found",
+				slog.Any("api_key", logging.MaskedString(apiKey)),
+			)
+
 			// キーが存在しない、または無効化されている場合は 401 エラーを返します
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid api key"))
 		}
@@ -62,8 +68,18 @@ func (h *AuthHandler) ValidateApiKey(
 
 	// 有効期限のチェック(設定されている場合)
 	if key.ExpiresAt.Valid && time.Now().After(key.ExpiresAt.Time) {
+		slog.WarnContext(ctx, "api key validation failed: key expired",
+			slog.Any("api_key", logging.MaskedString(apiKey)),
+		)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("api key has expired"))
 	}
+
+	// 監査ログ: 認証成功（安全にマスクしてキーを記録）
+	slog.InfoContext(ctx, "api key validated successfully",
+		slog.String("tenant_id", key.TenantID.String()),
+		slog.String("key_id", key.ID),
+		slog.Any("api_key", logging.MaskedString(apiKey)),
+	)
 
 	res := connect.NewResponse(&authv1.ValidateApiKeyResponse{
 		TenantId: key.TenantID.String(),
