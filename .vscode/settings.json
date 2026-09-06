@@ -27,14 +27,16 @@
         }
     },
     "[proto]": {
-        "editor.defaultFormatter": "DrBlury.protobuf-vsc"
+        "editor.defaultFormatter": "DrBlury.protobuf-vsc",
+        "editor.formatOnSave": true
     },
     "[protobuf]": {
-        "editor.defaultFormatter": "DrBlury.protobuf-vsc"
+        "editor.defaultFormatter": "DrBlury.protobuf-vsc",
+        "editor.formatOnSave": true
     },
     // Formatting
     "protobuf.formatOnSave": true,
-    "protobuf.formatter.alignFields": true,
+    "protobuf.formatter.alignFields": false,
     // Import search paths
     "protobuf.includes": [
         "${workspaceFolder}/proto"

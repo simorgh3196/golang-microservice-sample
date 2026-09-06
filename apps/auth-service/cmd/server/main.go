@@ -39,8 +39,8 @@ func main() {
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := shutdownTracer(shutdownCtx); err != nil {
-			logger.Error("Failed to shutdown tracer provider", slog.String("error", err.Error()))
+		if shutdownErr := shutdownTracer(shutdownCtx); shutdownErr != nil {
+			logger.Error("Failed to shutdown tracer provider", slog.String("error", shutdownErr.Error()))
 		}
 	}()
 
@@ -59,8 +59,8 @@ func main() {
 	defer pool.Close()
 
 	// 起動時に DB への疎通確認
-	if err := pool.Ping(ctx); err != nil {
-		logger.Error("Failed to ping DB", slog.String("error", err.Error()))
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		logger.Error("Failed to ping DB", slog.String("error", pingErr.Error()))
 		os.Exit(1)
 	}
 	logger.Info("Connected to database successfully")
