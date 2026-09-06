@@ -67,7 +67,10 @@ jobs:
 
       - name: Run govulncheck
         run: |
-          go run golang.org/x/vuln/cmd/govulncheck@latest ./apps/auth-service/... ./pkg/...
+          for dir in apps/auth-service pkg; do
+            echo "🔍 Scanning $dir..."
+            (cd "$dir" && go run golang.org/x/vuln/cmd/govulncheck@latest ./...)
+          done
 
   test:
     name: Unit Tests & Race Detector

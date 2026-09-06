@@ -21,8 +21,8 @@ message ValidateApiKeyRequest {
 // API Key 検証レスポンス
 message ValidateApiKeyResponse {
   string tenant_id = 1; // UUIDv7
-  string key_id    = 2;
-  string role      = 3; // admin / member / read_only
+  string key_id = 2;
+  string role = 3; // admin / member / read_only
 }
 
 // テナント情報取得リクエスト
@@ -33,6 +33,6 @@ message GetTenantRequest {
 // テナント情報取得レスポンス
 message GetTenantResponse {
   string tenant_id = 1; // UUIDv7
-  string name      = 2;
-  string plan      = 3; // enterprise / pro
+  string name = 2;
+  string plan = 3; // enterprise / pro
 }

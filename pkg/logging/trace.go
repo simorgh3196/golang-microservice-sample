@@ -13,7 +13,7 @@ type TraceHandler struct {
 	slog.Handler
 }
 
-// // NewTraceHandler は指定したハンドラをラップする TraceHandler を生成します。
+// NewTraceHandler は指定したハンドラをラップする TraceHandler を生成します。
 func NewTraceHandler(h slog.Handler) *TraceHandler {
 	return &TraceHandler{Handler: h}
 }
