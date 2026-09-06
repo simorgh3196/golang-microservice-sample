@@ -47,10 +47,9 @@ jobs:
           buf generate
           git diff --exit-code || (echo "❌ Protobuf code generation is out of date. Run 'buf generate' and commit the changes." && exit 1)
       - name: Buf Breaking Change Detection
-        # PR または feature ブランチで main との広報互換性を検証
         if: github.ref != 'refs/heads/main'
         run: |
-          buf breaking --against '.git#branch=main'
+          buf breaking --against "https://github.com/${{ github.repository }}.git#branch=main"
 
   vulncheck:
     name: Security Vulnerability Check (govulncheck)
