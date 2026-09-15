@@ -7,7 +7,7 @@ require (
 	connectrpc.com/otelconnect v0.9.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/simorgh3196/golang-microservice-sample/pkg v0.0.0-20260906140345-801a31ba10f4
 	github.com/stretchr/testify v1.12.1
 	google.golang.org/protobuf v1.36.12
