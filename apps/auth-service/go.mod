@@ -3,7 +3,7 @@ module github.com/simorgh3196/golang-microservice-sample/apps/auth-service
 go 1.27.0
 
 require (
-	connectrpc.com/connect v1.21.0
+	connectrpc.com/connect v1.21.1
 	connectrpc.com/otelconnect v0.10.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
