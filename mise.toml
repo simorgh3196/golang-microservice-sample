@@ -1,5 +1,5 @@
 [tools]
-go = "latest"
+go = "1.27"
 buf = "latest"
 golangci-lint = "latest"
 "go:github.com/josharian/impl" = "latest"
@@ -8,3 +8,4 @@ sqlc = "latest"
 
 [env]
 _.file = ".env"
+GOTOOLCHAIN = "local"
