@@ -84,8 +84,8 @@ jobs:
           go-version-file: "go.work"
           check-latest: true
 
-      - name: Run Tests
+      - name: Run Tests (Unit & Integration)
         run: |
           if [ -f "go.work" ] || [ -f "go.mod" ]; then
-            go test -v -race ./apps/auth-service/... ./pkg/...
+            go test -v -race -tags=integration ./apps/auth-service/... ./pkg/...
           fi
